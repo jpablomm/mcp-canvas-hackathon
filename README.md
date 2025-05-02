@@ -1,6 +1,7 @@
 # Canvas MCP Server
 
 
+[![smithery badge](https://smithery.ai/badge/@jpablomm/mcp-canvas-hackathon)](https://smithery.ai/server/@jpablomm/mcp-canvas-hackathon)
 
 This repository contains a Message Control Protocol (MCP) server implementation for interacting with the Canvas Learning Management System API. The server is designed to work with Claude Desktop and potentially other MCP clients.
 
@@ -22,6 +23,14 @@ The Canvas MCP Server provides a local interface to Canvas LMS API, allowing you
 - Canvas API URL (e.g., https://canvas.illinois.edu/api/v1)
 
 ## Installation
+
+### Installing via Smithery
+
+To install mcp-canvas-hackathon for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@jpablomm/mcp-canvas-hackathon):
+
+```bash
+npx -y @smithery/cli install @jpablomm/mcp-canvas-hackathon --client claude
+```
 
 1. Clone this repository:
 ```bash
