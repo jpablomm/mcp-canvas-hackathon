@@ -5,6 +5,15 @@ import sys
 import httpx
 import json
 from mcp.server.fastmcp import FastMCP
+import logging
+
+# Set up logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr)],
+)
+logger = logging.getLogger("canvas-mcp")
 
 # Initialize FastMCP server
 mcp = FastMCP("canvas-api")
@@ -78,15 +87,12 @@ async def make_canvas_request(
     """Make a request to the Canvas API with proper error handling."""
 
     try:
-        # Ensure the endpoint starts with a slash
         if not endpoint.startswith("/"):
             endpoint = f"/{endpoint}"
-
-        # Construct the full URL
-        url = f"{API_BASE_URL.rstrip('/')}{endpoint}"
-
-        # Log the request for debugging
-        print(f"Making {method.upper()} request to {url}", file=sys.stderr)
+        url = f"{API_BASE_URL.rstrip('/')}" + endpoint
+        logger.debug(
+            f"Making {method.upper()} request to {url} with params={params} data={data}"
+        )
 
         if method.lower() == "get":
             response = await http_client.get(url, params=params)
@@ -97,23 +103,23 @@ async def make_canvas_request(
         elif method.lower() == "delete":
             response = await http_client.delete(url, params=params)
         else:
+            logger.error(f"Unsupported HTTP method: {method}")
             return {"error": f"Unsupported method: {method}"}
-
         response.raise_for_status()
+        logger.debug(f"Response status: {response.status_code}")
         return response.json()
     except httpx.HTTPStatusError as e:
         error_message = f"HTTP error: {e.response.status_code}"
         try:
             error_details = e.response.json()
             error_message += f", Details: {error_details}"
-        except:
+        except Exception:
             error_details = e.response.text
             error_message += f", Text: {error_details}"
-
-        print(f"API error: {error_message}", file=sys.stderr)
+        logger.error(f"API error: {error_message}", exc_info=True)
         return {"error": error_message}
     except Exception as e:
-        print(f"Request failed: {str(e)}", file=sys.stderr)
+        logger.error(f"Request failed: {str(e)}", exc_info=True)
         return {"error": f"Request failed: {str(e)}"}
 
 
@@ -249,8 +255,9 @@ async def get_course_code(course_id: str) -> Optional[str]:
 async def list_courses(
     include_concluded: bool = False, include_all: bool = False
 ) -> str:
-    """List courses for the authenticated user."""
-
+    logger.info(
+        f"Called list_courses(include_concluded={include_concluded}, include_all={include_all})"
+    )
     params = {"include[]": ["term", "teachers", "total_students"], "per_page": 100}
 
     if not include_all:
@@ -278,6 +285,7 @@ async def list_courses(
             course_code_to_id_cache[course_code] = course_id
             id_to_course_code_cache[course_id] = course_code
 
+    logger.info(f"Returning {len(courses)} courses")
     courses_info = []
     for course in courses:
         course_id = course.get("id")
@@ -1628,12 +1636,14 @@ if __name__ == "__main__":
 
     # Check for API token
     if not API_TOKEN:
+        logger.error("CANVAS_API_TOKEN environment variable is missing!")
         print(
             "Error: CANVAS_API_TOKEN environment variable is required", file=sys.stderr
         )
         print("Please set it to your Canvas API token", file=sys.stderr)
         sys.exit(1)
 
+    logger.info(f"Starting Canvas MCP server with API URL: {API_BASE_URL}")
     print(f"Starting Canvas MCP server with API URL: {API_BASE_URL}", file=sys.stderr)
     print("Use Ctrl+C to stop the server", file=sys.stderr)
 
@@ -1641,7 +1651,11 @@ if __name__ == "__main__":
         # Run the server directly
         mcp.run()
     except KeyboardInterrupt:
+        logger.info("Shutting down server (KeyboardInterrupt)")
         print("\nShutting down server...", file=sys.stderr)
+    except Exception as e:
+        logger.error(f"Server failed: {e}", exc_info=True)
+        print(f"Server failed: {e}", file=sys.stderr)
     finally:
         # We'll rely on Python's cleanup to close the client
         pass
