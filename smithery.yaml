@@ -1,0 +1,25 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - canvasApiToken
+      - canvasApiUrl
+    properties:
+      canvasApiToken:
+        type: string
+        description: Canvas API token for authenticating with the Canvas LMS API
+      canvasApiUrl:
+        type: string
+        description: Base URL of the Canvas LMS API (e.g.,
+          https://canvas.youruniversity.edu/api/v1)
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({ command: "python", args: ["canvas_server_cached.py"], env: { CANVAS_API_TOKEN: config.canvasApiToken, CANVAS_API_URL: config.canvasApiUrl } })
+  exampleConfig:
+    canvasApiToken: 12345abcdef
+    canvasApiUrl: https://canvas.university.edu/api/v1
